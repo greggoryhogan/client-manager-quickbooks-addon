@@ -1,0 +1,80 @@
+<?php
+/*
+* Deadman Template
+*/ 
+
+get_header();
+
+/**
+ * 
+ * This template is no longer used. Perhaps one day it will arise again but for now it's being bk'd
+ * 
+ */
+?>
+<main id="site-content" role="main">
+	<article class="post-322 page type-page status-publish hentry" id="post-322">
+		<header class="entry-header has-text-align-center header-footer-group">
+			<div class="entry-header-inner section-inner medium">
+				<h1 class="entry-title"><?php echo get_the_title(); ?></h1>
+				<?php $log = get_option('deadman_update');
+					if($log) { 
+						$logtime = date('m/d/Y, h:i a', strtotime($log));
+						echo '<h2>Last Check-In: '.$logtime.'</h2>'; 
+					} ?>
+			</div><!-- .entry-header-inner -->
+		</header><!-- .entry-header -->
+		<div class="post-inner thin ">
+			<div class="entry-content">
+				<div class="section-inner">
+					<?php if(isset($_COOKIE['user_pin'])) {
+						$pin = $_COOKIE['user_pin'];
+						$args = array(
+							'post_type' => 'clients',
+							'meta_query' => array(
+								array(
+									'key' => 'client_pin',
+									'value' => $pin,
+									'compare' => '=',
+								)
+							)
+						);
+						query_posts( $args );
+						if(have_posts() ) {
+							// The Loop
+							while ( have_posts() ) : the_post();
+								$name = get_the_title();
+							endwhile;
+						}
+						wp_reset_postdata();
+					}?>
+					<?php the_content(); ?>	
+					<?php 
+					$two_weeks_ago = strtotime('-2 weeks');
+					$time = strtotime( $log );
+					if($time < $two_weeks_ago ) { 
+						update_option('gregg_is_dead',1);
+						echo '<p>If you&rsquo;re here, it isn&rsquo;t good (more for you, I likely don&rsquo;t care cause I&rsquo;m dead). If you&rsquo;re seeing this, nothing has been logged for two weeks. Any pertinent information will show here, and probably emailed to you too, depending if I&rsquo;ve coded that part. Also, not your responsibility, but maybe call my mom too, she&rsquo;s probably sad. <br>Thanks,<br><br>Gregg</p>';
+						$subject = "Shit, I'm dead";
+						$content = 'Ummmm.... I should code something to go here cause otherwise this is useless.';
+					}
+					else {
+						//echo $name;
+						// it's sooner than one week ago
+						$time_left = $time - $two_weeks_ago;
+						$days_left = floor($time_left / 86400); // 86400 = seconds per day
+						$hours_left = floor(($time_left - $days_left * 86400) / 3600); // 3600 = seconds per hour
+						echo '<p>Ha, you thought I was dead. More than likely I&rsquo;m not. I could be, but I wouldn&rsquo;t know. Realistically, you should pick up the phone and call me.</p>';
+						echo '<p>Check back in '.$days_left.' day(s) to see if I&rsquo;m dead. If I am, this page will be entiely different and you&rsquo;ll likely get an email that it&rsquo;s time to find a new dev.</p>';
+						$subject = "I'm not dead!";
+						$content = 'Congratulations. Now go make us money.';
+					} 
+					if(isset($_GET['dead'])) {
+						$deadmail = wp_mail('greggoryhogan@gmail.com',$subject,$content);
+					} ?>
+				</div><!-- .section-inner -->
+			</div><!-- .entry-content -->
+		</div><!-- .post-inner -->		
+	</article>
+</main><?php 
+get_footer();
+?>
