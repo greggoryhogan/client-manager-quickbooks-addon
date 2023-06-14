@@ -54,7 +54,8 @@
 .tribe-events-calendar-month__events {
     overflow: auto;
 }
-.tribe-events-calendar-month__day-cell .tribe-events-calendar-month__calendar-event-datetime {
+.tribe-events-calendar-month__day-cell .tribe-events-calendar-month__calendar-event-datetime,
+.tribe-events .tribe-events-calendar-month-mobile-events__mobile-day--show {
     display:none;
 }
 .tribe-events-calendar-month__day-cell h3,
