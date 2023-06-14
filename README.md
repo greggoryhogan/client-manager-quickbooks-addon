@@ -1,25 +1,14 @@
 # Client Manager
 
-A child theme of twentytwenty that manages clients and tracks logged hours. Create clients, categorize hours based on client access, summarize time billed, and give access to your client to review monthly hours.
+Client Manager allows you to create clients and sub-clients, and tracks logged hours for each client on an hourly-billing cycle. The frontend allows the client to log in and view a summary of the hours billed that month.
 
-This functionality is based on [The Events Calendar](https://theeventscalendar.com/) and changing 'events' to 'hours.'
+This functionality is based on [The Events Calendar](https://theeventscalendar.com/) and the plugin is required to function.
 
 In order to use this theme, define the following in wp-config:
 
-// Admin credentials for logging in from the frontend
+* define('ADMIN_LOGIN_PIN','PICKAPIN'); //Allows you to log in and view all your hours for the month
+* define('ADMIN_ID','THE ID OF THE ADMINISTRATOR WHO LOGS IN'); //Sets the id of the admin when logging in on the front end
 
-* define('ADMIN_LOGIN_PIN','PICKAPIN');
-* define('ADMIN_ID','THE ID OF THE ADMINISTRATOR WHO LOGS IN');
+TODO:
 
-// SMTP Credentials so we aren't relying on the server to send emails
-
-* define('SMTP_HOST','host.youremail.com');
-* define('SMTP_FROM','YOUR NAME');
-* define('SMTP_EMAIL','sample@sample.com');
-* define('SMTP_PASSWORD','YOUR PASSWORD');
-* define('SMTP_PORT','587');
-
-### TODO:
-
-* Separate functionality from child theme (aka this should be a plugin)
-* Add options page rather than setting definitions as
+* Add options page rather than setting definitions in wp-config

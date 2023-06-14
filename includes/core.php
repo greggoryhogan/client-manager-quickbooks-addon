@@ -1,81 +1,42 @@
 <?php
+
+/**
+ * Add notice if our plugin isn't active
+ * Adapted from https://theaveragedev.com/generating-a-wordpress-plugin-activation-link-url/
+ */
+function rb_core_plugin_check() {
+    if(!in_array('the-events-calendar/the-events-calendar.php', apply_filters('active_plugins', get_option('active_plugins')))){ 
+        echo '<div class="notice notice-warning">';
+            echo '<p>The Events Calendar is required for Client Manager to function. Please <a href="'.get_bloginfo('url').'/wp-admin/plugin-install.php?s=The%2520Events%2520Calendar&tab=search&type=term">install the plugin</a> in order to continue.</p>';
+        echo '</div>'; 
+    }
+}
+add_action( 'admin_notices', 'rb_core_plugin_check' );
+
+function my_plugin_body_class($classes) {
+    if(get_current_user_ID() > 0) {
+        $classes[] = 'logged-in';
+        $user = wp_get_current_user();
+ 
+        $roles = ( array ) $user->roles;
+        foreach($roles as $role) {
+            $classes[] = 'role-'.$role;
+        }
+    } else {
+        //$classes[] = 'logged-out';
+    }
+    return $classes;
+}
+
+add_filter('body_class', 'my_plugin_body_class');
+
 // Remove subscribe to calendar dropdown from main calendar page
 add_filter( 'tribe_template_html:events/v2/components/subscribe-links/list', '__return_false' );
 
-add_action( 'wp_enqueue_scripts', 'my_theme_enqueue_styles' );
-function my_theme_enqueue_styles() {
-    $parenthandle = 'parent-style'; // This is 'twentyfifteen-style' for the Twenty Fifteen theme.
-    $theme = wp_get_theme();
-    wp_enqueue_style( $parenthandle, get_template_directory_uri() . '/style.css', 
-        array()
-    );
-    wp_enqueue_style( 'child-style', get_stylesheet_uri(),
-        array( $parenthandle )
-    );
 
-    wp_enqueue_script( 'theme-js', get_stylesheet_directory_uri() . '/js.js', array('jquery'),'1.2',true );
-    wp_localize_script( 'theme-js', 'ajax_object', array( 'ajax_url' => admin_url( 'admin-ajax.php' ) ) );
-}
-
-add_action( 'tribe_template_after_include:events/v2/month/calendar-body', function( $file, $name, $template ) {
-    showHours();
-}, 10, 3 );
-
-add_action( 'tribe_template_before_include:events/v2/components/events-bar/views', function( $file, $name, $template ) {
-    if(get_current_user_ID() > 0) {
-        echo '<div class="plus"><a href="'.get_bloginfo('url').'/wp-admin/post-new.php?post_type=tribe_events" class="btn button" target="_blank">Log Time</a></div>';
-    }
-    
-}, 100, 3 );
-
-add_action( 'tribe_template_after_include:events/v2/month/calendar-body/day/calendar-events/calendar-event/title', function( $file, $name, $template ) {
-    $event_id = get_the_ID();
-    $event = tribe_get_event($event_id);
-    if($event) {
-
-        $term_list = wp_get_post_terms( $event_id, Tribe__Events__Main::TAXONOMY );
-        
-        foreach( $term_list as $term_single ) {
-            $event_cat = $term_single->name;
-        }
-        
-        $hours = $event->duration / 60 / 60;
-        $details = get_the_content($event_id);
-        $time = 'hours';
-        if($hours == 1) {
-            $time = 'hour';
-        } 
-
-        $timestamp = strtotime($event->start_date);
-        
-        $event_month = date('Y-m', $timestamp);
-        $rate = get_client_rate($event_cat);
-
-        echo '<h4 data-category="'.$event_cat.'" class="calculate-hours tribe-events-calendar-month__calendar-event-title tribe-common-h8 tribe-common-h--alt" data-month="'.$event_month.'"> -&nbsp;&nbsp;<span class="hours">'.$hours.'</span> '.$time.'<span class="details">'.$details.'</span><span class="rate">'.$rate.'</span></h4>';
-    }
-}, 10, 3 );
-
-function get_client_rate($client) {
-    global $wpdb;
-
-    $post = $wpdb->get_results("SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'client_category_access' AND  meta_value = '$client' LIMIT 1");
-
-
-    //$post = $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM $wpdb->posts WHERE post_title = %s AND post_type= %s", $client, 'clients'));
-    if ( $post ) {
-       // print_r($post);
-        return get_post_meta($post[0]->post_id, 'client_rate',true);
-    } else {
-        return 0;
-    }
-
-}
-function get_the_displayed_month() {
-    //return date( 'F', strtotime( tribe_get_month_view_date() ) );
-    return tribe_get_current_month_text();
-}
-
-function showHours() {
+add_action( 'tribe_template_after_include:events/v2/month/calendar-body', 'show_cm_hours',10,3);
+//add_action( 'tribe_template_after_include:events/v2/list/calendar-body', 'show_cm_hours',10,3);
+function show_cm_hours( $file, $name, $template ) {
     echo '<div id="allhours"></div>'; ?>
     <script>
         // Create our number formatter.
@@ -135,79 +96,66 @@ function showHours() {
     </script><?php
 }
 
-add_filter( 'tribe_events_views_v2_should_cache_html', '__return_false' );
-
-add_filter( 'auth_cookie_expiration', 'keep_me_logged_in_for_1_year' );
-function keep_me_logged_in_for_1_year( $expirein ) {
-    return 31556926; // 1 year in seconds
-}
-
-
-function my_plugin_body_class($classes) {
+add_action( 'tribe_template_before_include:events/v2/components/events-bar/views', function( $file, $name, $template ) {
     if(get_current_user_ID() > 0) {
-        $classes[] = 'logged-in user-'.get_current_user_ID();
+        echo '<div class="plus"><a href="'.get_bloginfo('url').'/wp-admin/post-new.php?post_type=tribe_events" class="btn button" target="_blank">Log Time</a></div>';
+    }
+    
+}, 100, 3 );
+
+add_action( 'tribe_template_after_include:events/v2/month/calendar-body/day/calendar-events/calendar-event/title', function( $file, $name, $template ) {
+    $event_id = get_the_ID();
+    $event = tribe_get_event($event_id);
+    if($event) {
+
+        $term_list = wp_get_post_terms( $event_id, Tribe__Events__Main::TAXONOMY );
+        
+        foreach( $term_list as $term_single ) {
+            $event_cat = $term_single->name;
+        }
+        
+        $hours = $event->duration / 60 / 60;
+        $details = get_the_content($event_id);
+        $time = 'hours';
+        if($hours == 1) {
+            $time = 'hour';
+        } 
+
+        $timestamp = strtotime($event->start_date);
+        
+        $event_month = date('Y-m', $timestamp);
+        $rate = get_client_rate($event_cat);
+
+        echo '<h4 data-category="'.$event_cat.'" class="calculate-hours tribe-events-calendar-month__calendar-event-title tribe-common-h8 tribe-common-h--alt" data-month="'.$event_month.'"> -&nbsp;&nbsp;<span class="hours">'.$hours.'</span> '.$time.'<span class="details">'.$details.'</span><span class="rate">'.$rate.'</span></h4>';
+    }
+}, 10, 3 );
+
+function get_client_rate($client) {
+    global $wpdb;
+
+    $post = $wpdb->get_results("SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'client_category_access' AND  meta_value = '$client' LIMIT 1");
+
+
+    //$post = $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM $wpdb->posts WHERE post_title = %s AND post_type= %s", $client, 'clients'));
+    if ( $post ) {
+       // print_r($post);
+        return get_post_meta($post[0]->post_id, 'client_rate',true);
     } else {
-        $classes[] = 'logged-out';
+        return 0;
     }
-    return $classes;
+
+}
+function get_the_displayed_month() {
+    //return date( 'F', strtotime( tribe_get_month_view_date() ) );
+    return tribe_get_current_month_text();
 }
 
-add_filter('body_class', 'my_plugin_body_class');
-
-add_action('init','save_options');
-function save_options() {
-    if(get_option('hide_my_site_ihmsa')){
-        update_option('hide_my_site_ihmsa', 'hmsia');
-    }
-    else {
-        add_option('hide_my_site_ihmsa', 'hmsia');
-    }
-}
-
-add_action('admin_head', 'remove_some_stuff_with_css');
-
-function remove_some_stuff_with_css() {
-  echo '<style>
-  #event_tribe_venue,
-  #event_tribe_organizer,
-  #event_url,
-  #event_cost,
-  .tribe-allday {
-      display:none;
-  }
-  </style>';
-}
-
+add_filter( 'tribe_events_views_v2_should_cache_html', '__return_false' );
 
 add_filter( 'tribe_event_label_singular', function() { return 'Hours'; } );
 add_filter( 'tribe_event_label_singular_lowercase', function() { return 'hours'; } );
 add_filter( 'tribe_event_label_plural', function() { return 'Hours'; } );
 add_filter( 'tribe_event_label_plural_lowercase', function() { return 'hours'; } );
-
-// ************* Remove default Posts type since no blog *************
-
-// Remove side menu
-add_action( 'admin_menu', 'remove_default_post_type' );
-
-function remove_default_post_type() {
-    remove_menu_page( 'edit.php' );
-}
-
-// Remove +New post in top Admin Menu Bar
-add_action( 'admin_bar_menu', 'remove_default_post_type_menu_bar', 999 );
-
-function remove_default_post_type_menu_bar( $wp_admin_bar ) {
-    $wp_admin_bar->remove_node( 'new-post' );
-}
-
-// Remove Quick Draft Dashboard Widget
-add_action( 'wp_dashboard_setup', 'remove_draft_widget', 999 );
-
-function remove_draft_widget(){
-    remove_meta_box( 'dashboard_quick_press', 'dashboard', 'side' );
-}
-// End remove post type
-
 add_action( 'wp_body_open', 'wpdoc_add_custom_body_open_code' );
  
 function wpdoc_add_custom_body_open_code() {
@@ -239,7 +187,6 @@ function clientLogin() {
 
 // Our custom post type function
 function create_posttype() {
- 
     register_post_type( 'clients',
     // CPT Options
         array(
@@ -258,19 +205,6 @@ function create_posttype() {
 }
 // Hooking up our function to theme setup
 add_action( 'init', 'create_posttype' );
-
-add_action( 'template_redirect', 'redirect_single_client' );
-function redirect_single_client(){
-    if ( ! is_singular( 'clients' ) )
-        return;
-    wp_redirect( get_bloginfo('url'), 301 );
-    exit;
-}
-
-add_filter( 'sanitize_text_field',  function ( $filtered, $str ) {
-    return _sanitize_text_fields( $str, true );
-}
-, 10, 2 );
 
 /*
  *
@@ -503,95 +437,6 @@ function save_time_tracker_client_meta( $post_id ) {
 }
 add_action( 'save_post_clients', 'save_time_tracker_client_meta' );
 
-function get_client() {
-    $pin = sanitize_text_field($_POST['pin']);
-    if($pin == ADMIN_LOGIN_PIN) {
-       	wp_set_auth_cookie(ADMIN_ID);
-        echo 'Welcome admin';
-    } else {
-        $args = array(
-            'post_type' => 'clients',
-            'meta_query' => array(
-                array(
-                    'key' => 'client_pin',
-                    'value' => $pin,
-                    'compare' => '=',
-                )
-            )
-        );
-        query_posts( $args );
-        if(have_posts() ) {
-            // The Loop
-            while ( have_posts() ) : the_post();
-                //set the cookie so they dont have to enter it every time
-                if(!isset($_COOKIE['user_pin'])) {
-                    $path     = '/';
-                    $url = get_bloginfo('url');
-                    $parts 	  = explode('//', $url );
-                    $domain   = '.'. $parts[1];
-                    $secure   = true;
-                    $httponly = false;
-                    $name     = 'user_pin';
-                    $expire   = time() + (10 * 365 * 24 * 60 * 60);
-                    $cookie = time();
-                    setcookie($name, $pin, $expire, $path, $domain, $secure, $httponly);
-                }
-
-                //now send the access to them
-                $access = get_post_meta(get_the_ID(),'client_category_access');
-                $string = '';
-                if($access) {
-                    foreach($access as $a) {
-                        $string .= $a.',';
-                    }
-                    $string = substr($string, 0, -1);
-                }
-
-                echo '<div id="accountfound" data-access="'.$string.'">';
-                    echo 'Found account '.get_the_title();
-                    echo '<br>Loading account...';
-                echo '</div>';
-                //setcookie('client-pin',$pin,time()+60*60*24*30);
-                //$_COOKIE['client-pin'] = $pin;
-            endwhile;
-        } else {
-            echo 'Invalid PIN';
-        }
-        
-        // Reset Query
-        wp_reset_query();
-    }
-    wp_die();
-}
-add_action('wp_ajax_get_client', 'get_client');
-add_action('wp_ajax_nopriv_get_client', 'get_client');
-
-add_action( 'save_post', 'timetracker_isnt_dead', 10, 3 );
-function timetracker_isnt_dead( $post_ID, $post, $update ) {
-    date_default_timezone_set('America/New_York');
-    update_option('deadman_update',date('m/d/Y h:i a', time()));
-    update_option('timetracker_is_dead',0);
-}
-
-/*
- *
- * Use my name is timetracker credentials to send accounts mail 
- * 
- */
-function pmp_smtp_filters( $phpmailer ) {
-	$phpmailer->isSMTP();    
-	$phpmailer->Host = SMTP_HOST;
-	$phpmailer->SMTPAuth = true; // Ask it to use authenticate using the Username and Password properties
-	$phpmailer->Port = SMTP_PORT;
-    $phpmailer->Username = SMTP_EMAIL;
-	$phpmailer->Password = SMTP_PASSWORD;
-	$phpmailer->setFrom(SMTP_EMAIL, SMTP_FROM);
-	$phpmailer->SMTPDebug = 0; //1 outputs debug info on screen
-}
-add_action( 'phpmailer_init', 'pmp_smtp_filters' ); 
-
-
-
 /*
  *
  * Change no hours text
@@ -659,11 +504,15 @@ function change_ec_strings($map) {
 		];
 	return $map;
 }
+
 //Allow 15 minute intervals for events calender timess
 add_filter( 'tribe_events_meta_box_timepicker_step', function() {
     return 15;
 });
 
+/**
+ * Add clients dropdown to admin toolbar
+ */
 add_action( 'admin_bar_menu', 'timetracker_client_list_admin_menu', 50 );
 function timetracker_client_list_admin_menu( $wp_admin_bar ) {
     $args = array(
@@ -698,8 +547,10 @@ function timetracker_client_list_admin_menu( $wp_admin_bar ) {
     
 }
 
+/** 
+ * Simple CSS for wp-admin
+ */
 add_action('admin_head', 'timetracker_admin_css');
-
 function timetracker_admin_css() {
   echo '<style>
   #event_tribe_venue,
@@ -708,5 +559,7 @@ function timetracker_admin_css() {
   #event_cost {
       display:none;
   }
+  
+
   </style>';
 }
