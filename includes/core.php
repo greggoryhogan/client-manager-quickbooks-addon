@@ -38,9 +38,9 @@ function set_dataservice() {
         'auth_mode' => 'oauth2',
         'ClientID' => QB_CLIENT_ID,
         'ClientSecret' =>  QB_CLIENT_SECRET,
-        'RedirectURI' => get_bloginfo('url').'/wp-admin/?cm-authorize-qb=2',
-        'scope' => 'com.intuit.quickbooks.accounting openid profile email phone address',
-        'baseUrl' => "development"
+        'RedirectURI' => trailingslashit(get_bloginfo('url')).'wp-admin/?cm-authorize-qb=2',
+        'scope' => 'com.intuit.quickbooks.accounting openid profile email phone address', //full scope: 'scope' => 'com.intuit.quickbooks.accounting com.intuit.quickbooks.payment openid',
+        'baseUrl' => "https://quickbooks.api.intuit.com/"
     ));
 }
 /**
@@ -48,6 +48,12 @@ function set_dataservice() {
  */
 add_action('admin_init','cma_authorize_qb');
 function cma_authorize_qb() {
+    if(isset($_GET['cma-action'])) {
+        $action = $_GET['cma-action'];
+        if($action == 'disconnect') {
+            update_option('cm_qb_access_token','');
+        }
+    }
     $access_token = get_option('cm_qb_access_token');
     if(isset($_GET['cm-authorize-qb']) && $access_token == '') {
         $dataService = set_dataservice();
@@ -88,14 +94,6 @@ function parseAuthRedirectUrl($url) {
 }
 
 /**
- * Query for invoices paid year to date
- */
-function cmaqb_get_invoices_paid_to_date() {
-    //SELECT * FROM Invoice WHERE TxnDate > '2011-01-01' AND TxnDate <= CURRENT_DATE
-   // https://quickbooks.api.intuit.com/v3/company/<realmId>/query?query=<select_statement>
-}
-
-/**
  * Quickbooks Dashboard Widget
  */
 add_action('wp_dashboard_setup', 'cm_qb_custom_dashboard_widgets');
@@ -105,10 +103,29 @@ function cm_qb_custom_dashboard_widgets() {
 }
  
 function cm_qb_summary_callback() {
-    // Create SDK instance
-    $dataService = $dataService = set_dataservice();
-    $accessToken = get_option('cm_qb_access_token');
-    $dataService->updateOAuth2Token($accessToken);
-    $companyInfo = $dataService->getCompanyInfo();
-    print_r($companyInfo);
+    $access_token = get_option('cm_qb_access_token');
+    if($access_token != '') {
+        // Create SDK instance
+        $dataService = $dataService = set_dataservice();
+        $dataService->updateOAuth2Token($access_token);
+        $year = date('Y-01-01');
+        $query = "SELECT * FROM Payment WHERE TxnDate > '$year' AND TxnDate <= CURRENT_DATE";
+        $payments = $dataService->Query($query);
+        $annual_total = 0;
+        if(is_array($payments)) {
+            if(!empty($payments)) {
+                foreach($payments as $payment) {
+                    $total = $payment->TotalAmt;
+                    $annual_total += $total;
+                }
+            }
+        } else {
+            echo $payments;
+        }
+        echo '<div class="client-summary-widget">';
+            echo '<div>Payments YTD</div><div style="font-weight:bold;">$'.number_format($annual_total,2).'</div>';
+        echo '</div>';
+    } else {
+        echo '<p>Please connect your Quickbooks account.</p>';
+    }
 }
