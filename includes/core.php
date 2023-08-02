@@ -1,5 +1,6 @@
 <?php
 use QuickBooksOnline\API\DataService\DataService;
+
 /**
  * Add notice if our plugin isn't active
  * Adapted from https://theaveragedev.com/generating-a-wordpress-plugin-activation-link-url/
@@ -11,7 +12,7 @@ function qbtac_core_plugin_check() {
         echo '</div>'; 
     }
     if(in_array('client-manager/client-manager.php', apply_filters('active_plugins', get_option('active_plugins')))){ 
-        $access_token = get_option('cm_qb_access_token');
+        $access_token = get_option('cm_qb_refresh_token');
         if($access_token == '') {
             $auth_link = admin_url(sprintf('?%s', http_build_query($_GET)) );
             if(substr($auth_link, -1) == '?') {
@@ -51,11 +52,11 @@ function cma_authorize_qb() {
     if(isset($_GET['cma-action'])) {
         $action = $_GET['cma-action'];
         if($action == 'disconnect') {
-            update_option('cm_qb_access_token','');
+            update_option('cm_qb_refresh_token','');
         }
     }
-    $access_token = get_option('cm_qb_access_token');
-    if(isset($_GET['cm-authorize-qb']) && $access_token == '') {
+    $refresh_token = get_option('cm_qb_refresh_token');
+    if(isset($_GET['cm-authorize-qb']) && $refresh_token == '') {
         $dataService = set_dataservice();
         $OAuth2LoginHelper = $dataService->getOAuth2LoginHelper();
         // Get the Authorization URL from the SDK
@@ -64,20 +65,19 @@ function cma_authorize_qb() {
             wp_redirect($authUrl);
         } else {
             $response = $_SERVER['QUERY_STRING'];
-
-            /* Will result in $api_response being an array of data,
-            parsed from the JSON response of the API listed above */
             $parseUrl = parseAuthRedirectUrl($response);
-            //Update the OAuth2Token
-            $accessToken = $OAuth2LoginHelper->exchangeAuthorizationCodeForToken($parseUrl['code'], $parseUrl['realmId']);
-            //$dataService->updateOAuth2Token($accessToken);
-            //Store the token
-            //$_SESSION['sessionAccessToken'] = $accessToken;
-            update_option('cm_qb_access_token',$accessToken);    
+            $access_token = $OAuth2LoginHelper->exchangeAuthorizationCodeForToken($parseUrl['code'], $parseUrl['realmId']);
+            $dataService->updateOAuth2Token($access_token);
+            $refreshTokenValue = $access_token->getRefreshToken();
+            $refreshTokenExpiry = $access_token->getRefreshTokenExpiresAt();
+            $access_tokenValue = $access_token->getAccessToken();
+            set_transient( 'cm_qb_access_token',$access_token, HOUR_IN_SECONDS);
+            update_option('cm_qb_refresh_token',$refreshTokenValue);    
+            update_option('cm_qb_realmId',$parseUrl['realmId']);    
             wp_redirect( get_bloginfo('url').'/wp-admin/?cma-authorized=1' );
             exit;
         }
-    } else if(isset($_GET['cm-authorize-qb']) && $access_token != '') {
+    } else if(isset($_GET['cm-authorize-qb']) && $refresh_token != '') {
         wp_redirect( get_bloginfo('url').'/wp-admin/?cma-authorized=1' );
     }
 }
@@ -99,14 +99,25 @@ function parseAuthRedirectUrl($url) {
 add_action('wp_dashboard_setup', 'cm_qb_custom_dashboard_widgets');
 function cm_qb_custom_dashboard_widgets() {
     global $wp_meta_boxes;
-    wp_add_dashboard_widget('cm_qb_summary_widget', 'Client Manager Quickbooks Summary', 'cm_qb_summary_callback');
+    wp_add_dashboard_widget('cm_qb_summary_widget', 'Client Manager Quickbooks Payments Summary', 'cm_qb_summary_callback');
 }
  
 function cm_qb_summary_callback() {
-    $access_token = get_option('cm_qb_access_token');
-    if($access_token != '') {
-        // Create SDK instance
-        $dataService = $dataService = set_dataservice();
+    $refresh_token = get_option('cm_qb_refresh_token');
+    if($refresh_token != '') {
+        $dataService = set_dataservice();
+        $access_token_transient = get_transient( 'cm_qb_access_token');
+        //$access_token_transient = FALSE;
+        if($access_token_transient === FALSE) {
+            $OAuth2LoginHelper = $dataService->getOAuth2LoginHelper();
+            $access_token = $OAuth2LoginHelper->refreshAccessTokenWithRefreshToken($refresh_token);
+            $access_token->setRealmID(get_option('cm_qb_realmId'));
+            $refreshTokenValue = $access_token->getRefreshToken();
+            set_transient( 'cm_qb_access_token', maybe_serialize($access_token), HOUR_IN_SECONDS);
+            update_option('cm_qb_refresh_token',$refreshTokenValue);   
+        } else {
+            $access_token = maybe_unserialize($access_token_transient);
+        }
         $dataService->updateOAuth2Token($access_token);
         $year = date('Y-01-01');
         $query = "SELECT * FROM Payment WHERE TxnDate >= '$year' AND TxnDate <= CURRENT_DATE";
@@ -120,11 +131,54 @@ function cm_qb_summary_callback() {
                 }
             }
             echo '<div class="client-summary-widget">';
-                echo '<div>Payments YTD</div><div style="font-weight:bold;">$'.number_format($annual_total,2).'</div>';
+                echo '<div>Payments YTD ('.count($payments).')</div><div style="font-weight:bold;">$'.number_format($annual_total,2).'</div>';
             echo '</div>';
         } else {
             echo '<p>No payments in '.date('Y').'</p>';
         }
+        
+        //Previous Year
+        $previous_year = (int)date('Y') - 1;
+        $year_end = date("$previous_year-12-31");
+        $year = date("$previous_year-01-01");
+        $query = "SELECT * FROM Payment WHERE TxnDate >= '$year' AND TxnDate <= '$year_end'";
+        $payments = $dataService->Query($query);
+        $annual_total = 0;
+        if(is_array($payments)) {
+            if(!empty($payments)) {
+                foreach($payments as $payment) {
+                    $total = $payment->TotalAmt;
+                    $annual_total += $total;
+                }
+            }
+            echo '<div class="client-summary-widget">';
+                echo '<div>'.$previous_year.' ('.count($payments).')</div><div>$'.number_format($annual_total,2).'</div>';
+            echo '</div>';
+        } else {
+            echo '<p>No payments in '.$previous_year.'</p>';
+        }
+
+        //Previous Year
+        $previous_year = $previous_year - 1;
+        $year_end = date("$previous_year-12-31");
+        $year = date("$previous_year-01-01");
+        $query = "SELECT * FROM Payment WHERE TxnDate >= '$year' AND TxnDate <= '$year_end'";
+        $payments = $dataService->Query($query);
+        $annual_total = 0;
+        if(is_array($payments)) {
+            if(!empty($payments)) {
+                foreach($payments as $payment) {
+                    $total = $payment->TotalAmt;
+                    $annual_total += $total;
+                }
+            }
+            echo '<div class="client-summary-widget">';
+                echo '<div>'.$previous_year.' ('.count($payments).')</div><div>$'.number_format($annual_total,2).'</div>';
+            echo '</div>';
+        } else {
+            echo '<p>No payments in '.$previous_year.'</p>';
+        }
+
     } else {
         echo '<p>Please connect your Quickbooks account.</p>';
     }
