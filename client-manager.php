@@ -2,7 +2,7 @@
 /*
 Plugin Name:  Client Manager
 Description:  Manage clients and track hours via the capability of The Events Calendar
-Version:	  1.0.9
+Version:	  1.0.10
 Author:		  Gregg Hogan
 Author URI:   https://mynameisgregg.com
 License:      GPL2
