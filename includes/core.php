@@ -109,7 +109,7 @@ function cm_qb_summary_callback() {
         $dataService = $dataService = set_dataservice();
         $dataService->updateOAuth2Token($access_token);
         $year = date('Y-01-01');
-        $query = "SELECT * FROM Payment WHERE TxnDate > '$year' AND TxnDate <= CURRENT_DATE";
+        $query = "SELECT * FROM Payment WHERE TxnDate >= '$year' AND TxnDate <= CURRENT_DATE";
         $payments = $dataService->Query($query);
         $annual_total = 0;
         if(is_array($payments)) {
@@ -119,12 +119,12 @@ function cm_qb_summary_callback() {
                     $annual_total += $total;
                 }
             }
+            echo '<div class="client-summary-widget">';
+                echo '<div>Payments YTD</div><div style="font-weight:bold;">$'.number_format($annual_total,2).'</div>';
+            echo '</div>';
         } else {
-            echo $payments;
+            echo '<p>No payments in '.date('Y').'</p>';
         }
-        echo '<div class="client-summary-widget">';
-            echo '<div>Payments YTD</div><div style="font-weight:bold;">$'.number_format($annual_total,2).'</div>';
-        echo '</div>';
     } else {
         echo '<p>Please connect your Quickbooks account.</p>';
     }
