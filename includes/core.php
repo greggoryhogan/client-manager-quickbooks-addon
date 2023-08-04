@@ -105,80 +105,86 @@ function cm_qb_custom_dashboard_widgets() {
 function cm_qb_summary_callback() {
     $refresh_token = get_option('cm_qb_refresh_token');
     if($refresh_token != '') {
-        $dataService = set_dataservice();
-        $access_token_transient = get_transient( 'cm_qb_access_token');
-        //$access_token_transient = FALSE;
-        if($access_token_transient === FALSE) {
-            $OAuth2LoginHelper = $dataService->getOAuth2LoginHelper();
-            $access_token = $OAuth2LoginHelper->refreshAccessTokenWithRefreshToken($refresh_token);
-            $access_token->setRealmID(get_option('cm_qb_realmId'));
-            $refreshTokenValue = $access_token->getRefreshToken();
-            set_transient( 'cm_qb_access_token', maybe_serialize($access_token), HOUR_IN_SECONDS);
-            update_option('cm_qb_refresh_token',$refreshTokenValue);   
-        } else {
-            $access_token = maybe_unserialize($access_token_transient);
-        }
-        $dataService->updateOAuth2Token($access_token);
-        $year = date('Y-01-01');
-        $query = "SELECT * FROM Payment WHERE TxnDate >= '$year' AND TxnDate <= CURRENT_DATE";
-        $payments = $dataService->Query($query);
-        $annual_total = 0;
-        if(is_array($payments)) {
-            if(!empty($payments)) {
-                foreach($payments as $payment) {
-                    $total = $payment->TotalAmt;
-                    $annual_total += $total;
-                }
+        $summary_transient = get_transient('cma_qb_db_widget');
+        if($summary_transient === false) {
+            ob_start();
+            $dataService = set_dataservice();
+            $access_token_transient = get_transient( 'cm_qb_access_token');
+            //$access_token_transient = FALSE;
+            if($access_token_transient === FALSE) {
+                $OAuth2LoginHelper = $dataService->getOAuth2LoginHelper();
+                $access_token = $OAuth2LoginHelper->refreshAccessTokenWithRefreshToken($refresh_token);
+                $access_token->setRealmID(get_option('cm_qb_realmId'));
+                $refreshTokenValue = $access_token->getRefreshToken();
+                set_transient( 'cm_qb_access_token', maybe_serialize($access_token), HOUR_IN_SECONDS);
+                update_option('cm_qb_refresh_token',$refreshTokenValue);   
+            } else {
+                $access_token = maybe_unserialize($access_token_transient);
             }
-            echo '<div class="client-summary-widget">';
-                echo '<div>Payments YTD ('.count($payments).')</div><div style="font-weight:bold;">$'.number_format($annual_total,2).'</div>';
-            echo '</div>';
-        } else {
-            echo '<p>No payments in '.date('Y').'</p>';
-        }
-        
-        //Previous Year
-        $previous_year = (int)date('Y') - 1;
-        $year_end = date("$previous_year-12-31");
-        $year = date("$previous_year-01-01");
-        $query = "SELECT * FROM Payment WHERE TxnDate >= '$year' AND TxnDate <= '$year_end'";
-        $payments = $dataService->Query($query);
-        $annual_total = 0;
-        if(is_array($payments)) {
-            if(!empty($payments)) {
-                foreach($payments as $payment) {
-                    $total = $payment->TotalAmt;
-                    $annual_total += $total;
+            $dataService->updateOAuth2Token($access_token);
+            $year = date('Y-01-01');
+            $query = "SELECT * FROM Payment WHERE TxnDate >= '$year' AND TxnDate <= CURRENT_DATE";
+            $payments = $dataService->Query($query);
+            $annual_total = 0;
+            if(is_array($payments)) {
+                if(!empty($payments)) {
+                    foreach($payments as $payment) {
+                        $total = $payment->TotalAmt;
+                        $annual_total += $total;
+                    }
                 }
+                echo '<div class="client-summary-widget">';
+                    echo '<div>Payments YTD ('.count($payments).')</div><div style="font-weight:bold;">$'.number_format($annual_total,2).'</div>';
+                echo '</div>';
+            } else {
+                echo '<p>No payments in '.date('Y').'</p>';
             }
-            echo '<div class="client-summary-widget">';
-                echo '<div>'.$previous_year.' ('.count($payments).')</div><div>$'.number_format($annual_total,2).'</div>';
-            echo '</div>';
-        } else {
-            echo '<p>No payments in '.$previous_year.'</p>';
-        }
+            
+            //Previous Year
+            $previous_year = (int)date('Y') - 1;
+            $year_end = date("$previous_year-12-31");
+            $year = date("$previous_year-01-01");
+            $query = "SELECT * FROM Payment WHERE TxnDate >= '$year' AND TxnDate <= '$year_end'";
+            $payments = $dataService->Query($query);
+            $annual_total = 0;
+            if(is_array($payments)) {
+                if(!empty($payments)) {
+                    foreach($payments as $payment) {
+                        $total = $payment->TotalAmt;
+                        $annual_total += $total;
+                    }
+                }
+                echo '<div class="client-summary-widget">';
+                    echo '<div>'.$previous_year.' ('.count($payments).')</div><div>$'.number_format($annual_total,2).'</div>';
+                echo '</div>';
+            } else {
+                echo '<p>No payments in '.$previous_year.'</p>';
+            }
 
-        //Previous Year
-        $previous_year = $previous_year - 1;
-        $year_end = date("$previous_year-12-31");
-        $year = date("$previous_year-01-01");
-        $query = "SELECT * FROM Payment WHERE TxnDate >= '$year' AND TxnDate <= '$year_end'";
-        $payments = $dataService->Query($query);
-        $annual_total = 0;
-        if(is_array($payments)) {
-            if(!empty($payments)) {
-                foreach($payments as $payment) {
-                    $total = $payment->TotalAmt;
-                    $annual_total += $total;
+            //Previous Year
+            $previous_year = $previous_year - 1;
+            $year_end = date("$previous_year-12-31");
+            $year = date("$previous_year-01-01");
+            $query = "SELECT * FROM Payment WHERE TxnDate >= '$year' AND TxnDate <= '$year_end'";
+            $payments = $dataService->Query($query);
+            $annual_total = 0;
+            if(is_array($payments)) {
+                if(!empty($payments)) {
+                    foreach($payments as $payment) {
+                        $total = $payment->TotalAmt;
+                        $annual_total += $total;
+                    }
                 }
+                echo '<div class="client-summary-widget">';
+                    echo '<div>'.$previous_year.' ('.count($payments).')</div><div>$'.number_format($annual_total,2).'</div>';
+                echo '</div>';
+            } else {
+                echo '<p>No payments in '.$previous_year.'</p>';
             }
-            echo '<div class="client-summary-widget">';
-                echo '<div>'.$previous_year.' ('.count($payments).')</div><div>$'.number_format($annual_total,2).'</div>';
-            echo '</div>';
-        } else {
-            echo '<p>No payments in '.$previous_year.'</p>';
+            $summary_transient = ob_get_clean();
+            set_transient( 'cma_qb_db_widget', $summary_transient, HOUR_IN_SECONDS );
         }
-
+        echo $summary_transient;
     } else {
         echo '<p>Please connect your Quickbooks account.</p>';
     }
