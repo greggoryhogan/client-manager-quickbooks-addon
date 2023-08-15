@@ -30,6 +30,11 @@ function qbtac_core_plugin_check() {
             echo '<p>Successfully authorized with Quickbooks.</p>';
         echo '</div>'; 
     }
+    if(isset($_GET['cma-bq-refresh'])) {
+        echo '<div class="notice">';
+            echo '<p>Quickbooks sync request sent!</p>';
+        echo '</div>'; 
+    }
 
 }
 add_action( 'admin_notices', 'qbtac_core_plugin_check' );
@@ -106,7 +111,7 @@ function cm_qb_summary_callback() {
     $refresh_token = get_option('cm_qb_refresh_token');
     if($refresh_token != '') {
         $summary_transient = get_transient('cma_qb_db_widget');
-        if($summary_transient === false) {
+        if($summary_transient === false || isset($_GET['cma-bq-refresh'])) {
             ob_start();
             $dataService = set_dataservice();
             $access_token_transient = get_transient( 'cm_qb_access_token');
@@ -185,6 +190,7 @@ function cm_qb_summary_callback() {
             set_transient( 'cma_qb_db_widget', $summary_transient, HOUR_IN_SECONDS );
         }
         echo $summary_transient;
+        echo '<p><a href="'.get_bloginfo('url').'/wp-admin/index.php?cma-bq-refresh=1" class="button button-primary">Sync Now</a></p>';
     } else {
         echo '<p>Please connect your Quickbooks account.</p>';
     }
