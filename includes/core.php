@@ -111,7 +111,7 @@ function cm_qb_summary_callback() {
     $refresh_token = get_option('cm_qb_refresh_token');
     if($refresh_token != '') {
         $summary_transient = get_transient('cma_qb_db_widget');
-        if($summary_transient === false || isset($_GET['cma-bq-refresh'])) {
+        if(isset($_GET['cma-bq-refresh'])) {
             ob_start();
             $dataService = set_dataservice();
             $access_token_transient = get_transient( 'cm_qb_access_token');
@@ -187,10 +187,12 @@ function cm_qb_summary_callback() {
                 echo '<p>No payments in '.$previous_year.'</p>';
             }
             $summary_transient = ob_get_clean();
-            set_transient( 'cma_qb_db_widget', $summary_transient, HOUR_IN_SECONDS );
+            set_transient( 'cma_qb_db_widget', $summary_transient, YEAR_IN_SECONDS );
         }
         echo $summary_transient;
-        echo '<p><a href="'.get_bloginfo('url').'/wp-admin/index.php?cma-bq-refresh=1" class="button button-primary">Sync Now</a></p>';
+        if(!isset($_GET['cma-bq-refresh'])) {
+            echo '<p><a href="'.get_bloginfo('url').'/wp-admin/index.php?cma-bq-refresh=1" class="button button-primary">Sync Now</a></p>';
+        }
     } else {
         echo '<p>Please connect your Quickbooks account.</p>';
     }
