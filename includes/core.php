@@ -208,41 +208,10 @@ add_action( 'add_meta_boxes', 'client_manager_qb_register_meta_boxes' );
 
 function get_qb_customer_id($customer) {
     //Customer ID found in QB by browsing to Customers and finding nameId in url
-    $customers = array(
-        array(
-            'client' => 'interactology',
-            'customer_id' => 2
-        ),
-        array(
-            'client' => 'redeeming-babel',
-            'customer_id' => 6
-        ),
-        array(
-            'client' => 'zone',
-            'customer_id' => 8
-        ),
-        array(
-            'client' => 'tomlinson',
-            'customer_id' => 10
-        ),
-        array(
-            'client' => 'kelly-creative',
-            'customer_id' => 15
-        ),
-        array(
-            'client' => 'bhfe',
-            'customer_id' => 5
-        ),
-        array(
-            'client' => 'holland-mark',
-            'customer_id' => 4
-        ),
-    );
-    $key = array_search($customer,array_column($customers, 'client'));
-    if($key !== false) {
-        $key = $customers[$key]['customer_id'];
+    if(!defined("CM-QBA-$customer")) {
+        return false;
     }
-    return $key;
+    return constant("CM-QBA-$customer");
 }
 function cm_qba_client_summary($post) {
     global $post;
