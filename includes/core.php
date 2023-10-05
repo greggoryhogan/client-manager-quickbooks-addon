@@ -197,3 +197,156 @@ function cm_qb_summary_callback() {
         echo '<p>Please connect your Quickbooks account.</p>';
     }
 }
+
+/**
+ * Add meta box with summary
+ */
+function client_manager_qb_register_meta_boxes() {
+    add_meta_box( 'cm-qb-client-summary', __( 'Client Manager Quickbooks Payments Summary', 'cmqba' ), 'cm_qba_client_summary', 'clients', 'side' );
+}
+add_action( 'add_meta_boxes', 'client_manager_qb_register_meta_boxes' );
+
+function get_qb_customer_id($customer) {
+    //Customer ID found in QB by browsing to Customers and finding nameId in url
+    $customers = array(
+        array(
+            'client' => 'interactology',
+            'customer_id' => 2
+        ),
+        array(
+            'client' => 'redeeming-babel',
+            'customer_id' => 6
+        ),
+        array(
+            'client' => 'zone',
+            'customer_id' => 8
+        ),
+        array(
+            'client' => 'tomlinson',
+            'customer_id' => 10
+        ),
+        array(
+            'client' => 'kelly-creative',
+            'customer_id' => 15
+        ),
+        array(
+            'client' => 'bhfe',
+            'customer_id' => 5
+        ),
+        array(
+            'client' => 'holland-mark',
+            'customer_id' => 4
+        ),
+    );
+    $key = array_search($customer,array_column($customers, 'client'));
+    if($key !== false) {
+        $key = $customers[$key]['customer_id'];
+    }
+    return $key;
+}
+function cm_qba_client_summary($post) {
+    global $post;
+    $post_id = $post->ID;
+    $refresh_token = get_option('cm_qb_refresh_token');
+    if($refresh_token != '') {
+        $summary_transient = get_transient('cma_qb_db_widget_'.$post_id);
+        if(isset($_GET['cma-bq-refresh'])) {
+            ob_start();
+            $dataService = set_dataservice();
+            $customerId = get_qb_customer_id($post->post_name);
+            if($customerId != FALSE) {
+                $access_token_transient = get_transient( 'cm_qb_access_token');
+                //$access_token_transient = FALSE;
+                if($access_token_transient === FALSE) {
+                    $OAuth2LoginHelper = $dataService->getOAuth2LoginHelper();
+                    $access_token = $OAuth2LoginHelper->refreshAccessTokenWithRefreshToken($refresh_token);
+                    $access_token->setRealmID(get_option('cm_qb_realmId'));
+                    $refreshTokenValue = $access_token->getRefreshToken();
+                    set_transient( 'cm_qb_access_token', maybe_serialize($access_token), HOUR_IN_SECONDS);
+                    update_option('cm_qb_refresh_token',$refreshTokenValue);   
+                } else {
+                    $access_token = maybe_unserialize($access_token_transient);
+                }
+                $dataService->updateOAuth2Token($access_token);
+                $year = date('Y-01-01');
+                $query = "SELECT * FROM Payment WHERE TxnDate >= '$year' AND TxnDate <= CURRENT_DATE AND CustomerRef = '$customerId'";
+                $payments = $dataService->Query($query);
+                $annual_total = 0;
+                if(is_array($payments)) {
+                    if(!empty($payments)) {
+                        foreach($payments as $payment) {
+                            //echo '<pre>'.print_r($payment,true).'</pre>';
+                            $total = $payment->TotalAmt;
+                            $annual_total += $total;
+                        }
+                    }
+                    echo '<div class="client-summary-widget">';
+                        echo '<div>Payments YTD ('.count($payments).')</div><div style="font-weight:bold;">$'.number_format($annual_total,2).'</div>';
+                    echo '</div>';
+                } else {
+                    echo '<div class="client-summary-widget">';
+                        echo '<div>No payments in '.date('Y').'</div><div></div>';
+                    echo '</div>';
+                }
+                
+                //Previous Year
+                $previous_year = (int)date('Y') - 1;
+                $year_end = date("$previous_year-12-31");
+                $year = date("$previous_year-01-01");
+                $query = "SELECT * FROM Payment WHERE TxnDate >= '$year' AND TxnDate <= '$year_end' AND CustomerRef = '$customerId'";
+                $payments = $dataService->Query($query);
+                $annual_total = 0;
+                if(is_array($payments)) {
+                    if(!empty($payments)) {
+                        foreach($payments as $payment) {
+                            $total = $payment->TotalAmt;
+                            $annual_total += $total;
+                        }
+                    }
+                    echo '<div class="client-summary-widget">';
+                        echo '<div>'.$previous_year.' ('.count($payments).')</div><div>$'.number_format($annual_total,2).'</div>';
+                    echo '</div>';
+                } else {
+                    echo '<div class="client-summary-widget">';
+                        echo '<div>No payments in '.$previous_year.'</div><div></div>';
+                    echo '</div>';
+                }
+
+                //Previous Year
+                $previous_year = $previous_year - 1;
+                $year_end = date("$previous_year-12-31");
+                $year = date("$previous_year-01-01");
+                $query = "SELECT * FROM Payment WHERE TxnDate >= '$year' AND TxnDate <= '$year_end' AND CustomerRef = '$customerId'";
+                $payments = $dataService->Query($query);
+                $annual_total = 0;
+                if(is_array($payments)) {
+                    if(!empty($payments)) {
+                        foreach($payments as $payment) {
+                            $total = $payment->TotalAmt;
+                            $annual_total += $total;
+                        }
+                    }
+                    echo '<div class="client-summary-widget">';
+                        echo '<div>'.$previous_year.' ('.count($payments).')</div><div>$'.number_format($annual_total,2).'</div>';
+                    echo '</div>';
+                } else {
+                    echo '<div class="client-summary-widget">';
+                        echo '<div>No payments in '.$previous_year.'</div><div></div>';
+                    echo '</div>';
+                }
+                $summary_transient = ob_get_clean();
+                set_transient( 'cma_qb_db_widget_'.$post_id, $summary_transient, YEAR_IN_SECONDS );
+            } else {
+                echo '<p>Could not find this client in Quickbooks.</p>';
+                $summary_transient = ob_get_clean();
+                set_transient( 'cma_qb_db_widget_'.$post_id, $summary_transient, YEAR_IN_SECONDS );
+            }
+        }
+        echo $summary_transient;
+        if(!isset($_GET['cma-bq-refresh'])) {
+            echo '<p><a href="'.get_edit_post_link($post).'&cma-bq-refresh=1" class="button button-primary">Sync Now</a></p>';
+        }
+    } else {
+        echo '<p>Please connect your Quickbooks account.</p>';
+    }
+}
