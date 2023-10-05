@@ -2,7 +2,7 @@
 
 This plugin connects to Quickbooks to add a summary of year-to-date invoices in the WordPress dashboard and individual summaries in the client editor. It is targeted towards **advanced users**, as it requires a little extra work to get working.
 
-You must create your own app in Quickbooks to use this plugin. Once your app is published, add the following constants to wp-config.php:
+You must [create your own app in Quickbooks](https://developer.intuit.com/app/developer/qbo/docs/develop) to use this plugin. Once your app is published, add the following constants to wp-config.php:
 
 define('QB_CLIENT_ID','*YOUR QB CLIENT ID*');
 
