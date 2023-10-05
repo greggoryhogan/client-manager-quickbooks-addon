@@ -8,7 +8,7 @@ define('QB_CLIENT_ID','*YOUR QB CLIENT ID*');
 
 define('QB_CLIENT_SECRET','*YOUR QB CLIENT SECRET*');
 
-To use the individual client summary, add a definition for each client in wp-config with the post name (slug) and )nameId for your client. For example, when the client is 'My Name is Gregg' (https://yoursite.com/clients/my-name-is-gregg/) and the customer nameId is 5 (https://app.qbo.intuit.com/app/customerdetail?nameId=5), add the following constant:
+To use the individual client summary, add a definition for each client in wp-config with the post name (slug) and nameId for your client. For example, when the client is 'My Name is Gregg' (https://yoursite.com/clients/my-name-is-gregg/) and the customer nameId is 5 (https://app.qbo.intuit.com/app/customerdetail?nameId=5), add the following constant:
 
 define('CM-QBA-my-name-is-gregg',5);
 
