@@ -13,3 +13,7 @@ To use the individual client summary, add a definition for each client in wp-con
 define('CM-QBA-my-name-is-gregg',5);
 
 Repeat this process for each client in your client manager.
+
+TODO:
+
+* Add checks for Quickbooks client id and secret before making a request
