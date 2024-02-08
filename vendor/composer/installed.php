@@ -6,7 +6,7 @@
     'aliases' => 
     array (
     ),
-    'reference' => 'dddfcfe785eac7b78e072e155e393cb1aebf059e',
+    'reference' => 'c8ae3a65e07edbf368f9a7bff3b091582ad86c4b',
     'name' => '__root__',
   ),
   'versions' => 
@@ -18,7 +18,7 @@
       'aliases' => 
       array (
       ),
-      'reference' => 'dddfcfe785eac7b78e072e155e393cb1aebf059e',
+      'reference' => 'c8ae3a65e07edbf368f9a7bff3b091582ad86c4b',
     ),
     'quickbooks/v3-php-sdk' => 
     array (

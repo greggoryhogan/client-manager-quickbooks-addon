@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6c3e1ad53dd710b722db0981797e2ef8",
+    "content-hash": "04ebc41b44c774ae507c6fc6b840e616",
     "packages": [
         {
             "name": "quickbooks/v3-php-sdk",
