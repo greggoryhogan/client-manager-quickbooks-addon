@@ -30,7 +30,7 @@ private static $installed = array (
     'aliases' => 
     array (
     ),
-    'reference' => 'c8ae3a65e07edbf368f9a7bff3b091582ad86c4b',
+    'reference' => '49912f75884c86b5ae4270872796f5ffd240d65a',
     'name' => '__root__',
   ),
   'versions' => 
@@ -42,7 +42,7 @@ private static $installed = array (
       'aliases' => 
       array (
       ),
-      'reference' => 'c8ae3a65e07edbf368f9a7bff3b091582ad86c4b',
+      'reference' => '49912f75884c86b5ae4270872796f5ffd240d65a',
     ),
     'quickbooks/v3-php-sdk' => 
     array (

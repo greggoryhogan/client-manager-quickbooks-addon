@@ -63,7 +63,9 @@ function cma_authorize_qb() {
     $refresh_token = get_option('cm_qb_refresh_token');
     if(isset($_GET['cm-authorize-qb']) && $refresh_token == '') {
         $dataService = set_dataservice();
+        $dataService->disableLog();
         $OAuth2LoginHelper = $dataService->getOAuth2LoginHelper();
+        $dataService->disableLog();
         // Get the Authorization URL from the SDK
         $authUrl = $OAuth2LoginHelper->getAuthorizationCodeURL();
         if($_GET['cm-authorize-qb'] == 1) {
@@ -73,6 +75,7 @@ function cma_authorize_qb() {
             $parseUrl = parseAuthRedirectUrl($response);
             $access_token = $OAuth2LoginHelper->exchangeAuthorizationCodeForToken($parseUrl['code'], $parseUrl['realmId']);
             $dataService->updateOAuth2Token($access_token);
+            $dataService->disableLog();
             $refreshTokenValue = $access_token->getRefreshToken();
             $refreshTokenExpiry = $access_token->getRefreshTokenExpiresAt();
             $access_tokenValue = $access_token->getAccessToken();
@@ -114,6 +117,7 @@ function cm_qb_summary_callback() {
         if(isset($_GET['cma-bq-refresh'])) {
             ob_start();
             $dataService = set_dataservice();
+            $dataService->disableLog();
             $access_token_transient = get_transient( 'cm_qb_access_token');
             //$access_token_transient = FALSE;
             if($access_token_transient === FALSE) {
@@ -127,6 +131,7 @@ function cm_qb_summary_callback() {
                 $access_token = maybe_unserialize($access_token_transient);
             }
             $dataService->updateOAuth2Token($access_token);
+            $dataService->disableLog();
             $year = date('Y-01-01');
             $query = "SELECT * FROM Payment WHERE TxnDate >= '$year' AND TxnDate <= CURRENT_DATE";
             $payments = $dataService->Query($query);
@@ -222,12 +227,14 @@ function cm_qba_client_summary($post) {
         if(isset($_GET['cma-bq-refresh'])) {
             ob_start();
             $dataService = set_dataservice();
+            $dataService->disableLog();
             $customerId = get_qb_customer_id($post->post_name);
             if($customerId != FALSE) {
                 $access_token_transient = get_transient( 'cm_qb_access_token');
                 //$access_token_transient = FALSE;
                 if($access_token_transient === FALSE) {
                     $OAuth2LoginHelper = $dataService->getOAuth2LoginHelper();
+                    $dataService->disableLog();
                     $access_token = $OAuth2LoginHelper->refreshAccessTokenWithRefreshToken($refresh_token);
                     $access_token->setRealmID(get_option('cm_qb_realmId'));
                     $refreshTokenValue = $access_token->getRefreshToken();
@@ -237,6 +244,7 @@ function cm_qba_client_summary($post) {
                     $access_token = maybe_unserialize($access_token_transient);
                 }
                 $dataService->updateOAuth2Token($access_token);
+                $dataService->disableLog();
                 $year = date('Y-01-01');
                 $query = "SELECT * FROM Payment WHERE TxnDate >= '$year' AND TxnDate <= CURRENT_DATE AND CustomerRef = '$customerId'";
                 $payments = $dataService->Query($query);
